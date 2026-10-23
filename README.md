@@ -41,10 +41,6 @@ No root. Nothing uninstalled. One button to undo.
 - **Works offline.** Prayer times, the verse and the moon need no internet; the weather shows the last forecast for up
   to a day. If a power cut leaves the TV's clock wrong, the date and prayers hide until it's right again.
 
-**On TCL TVs**
-- The remote's Netflix, YouTube and Prime buttons keep working (and can open other apps).
-- The power light stays on in standby, as it should.
-
 ## Install with Claude Code
 
 The easiest way: let [Claude Code](https://claude.com/claude-code) do it. About ten minutes.
@@ -170,7 +166,6 @@ home screen and promo apps, and walks you through a test. [CLAUDE.md](CLAUDE.md)
 | [`Recs.java`](app/src/io/freemytv/Recs.java) | The picks (TMDB) |
 | [`HomeData.java`](app/src/io/freemytv/HomeData.java) | Weather and prices |
 | [`HomeApps.java`](app/src/io/freemytv/HomeApps.java) | The Dock, inputs and All Apps |
-| [`StandbyLight.java`](app/src/io/freemytv/StandbyLight.java) | TCL's power light in standby |
 | [`Watchdog.java`](app/src/io/freemytv/Watchdog.java) | The safety net |
 
 ## Privacy
@@ -180,7 +175,7 @@ only when `show_crypto=true`. Your settings stay on your computer and your TV.
 
 ## Credits
 
-- **This edition** (tvOS-style home screen, weather screensaver, prayer times, daily verse, offline mode, TCL fixes):
+- **This edition** (tvOS-style home screen, weather screensaver, prayer times, daily verse, offline mode):
   designed by **Mohamed Zameel** ([@MohamedZameell](https://github.com/MohamedZameell)) and built together with
   **Claude** ([Claude Code](https://claude.com/claude-code), Anthropic).
 - **The original [Free My TV](https://github.com/simbasjungles/free-my-tv)**: by **Simba**

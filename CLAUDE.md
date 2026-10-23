@@ -35,9 +35,7 @@ before you do it, and let them do the taps on the TV.
    TCL's `TclAppBoot` blocks background jobs by default, so the switch (and the watchdog) never run. The log shows
    `forbid bind service ... ModeJob`.
 7. **Tell them what the switch does** before they make it: the home screen and screensaver change, a short list of
-   promo apps is turned off (never uninstalled), and *Original* brings it all back. On TCL, the remote's Netflix,
-   YouTube and Prime buttons keep working through a small accessibility service that only reads those buttons
-   (*Free My TV* → *Remote Buttons* picks what each opens); *Original* turns it off.
+   promo apps is turned off (never uninstalled), and *Original* brings it all back.
 8. **They switch on the TV:** *Free My TV* → *Home Screen* → *Free My TV*. The app uses the TV's own ADB on
    127.0.0.1 with its own key, so the TV asks once more to allow debugging. Don't switch modes from the computer.
    If the TV's Wi-Fi was saved during its first setup, the switch stops before changing anything and asks them to
