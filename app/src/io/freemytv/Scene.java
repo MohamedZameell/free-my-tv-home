@@ -141,10 +141,9 @@ final class Scene {
         advance(time);
     }
 
+    /** A new read-only bitmap each time (the GPU uploads it once; one being reused would be uploaded every frame). */
     private static Bitmap fill(Bitmap b, int[] pixels) {
-        if (b == null) b = Bitmap.createBitmap(Backdrop.GW, Backdrop.GH, Bitmap.Config.ARGB_8888);
-        b.setPixels(pixels, 0, Backdrop.GW, 0, 0, Backdrop.GW, Backdrop.GH);
-        return b;
+        return Bitmap.createBitmap(pixels, Backdrop.GW, Backdrop.GH, Bitmap.Config.ARGB_8888);
     }
 
     private static BitmapShader linear(Bitmap b) {
@@ -179,8 +178,7 @@ final class Scene {
 
     /** The glass now reads the blurred background image (Backdrop.FW × FH, ARGB). */
     void setFrost(int[] pixels) {
-        if (frostImage == null) frostImage = Bitmap.createBitmap(Backdrop.FW, Backdrop.FH, Bitmap.Config.ARGB_8888);
-        frostImage.setPixels(pixels, 0, Backdrop.FW, 0, 0, Backdrop.FW, Backdrop.FH);
+        frostImage = Bitmap.createBitmap(pixels, Backdrop.FW, Backdrop.FH, Bitmap.Config.ARGB_8888);
         imageFrost = true;
         if (glass == null) return;
         BitmapShader s = new BitmapShader(frostImage, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP);

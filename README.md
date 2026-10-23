@@ -1,63 +1,90 @@
 <div align="center">
 
-<img src="docs/assets/icon-512.png" width="96" alt="">
+<img src="app/res/drawable-nodpi/icon.png" width="96" alt="">
 
-# Free My TV
+# Free My TV Home
 
-**A fast, ad-free home screen for Google TV.**
+**A calm, ad-free, tvOS-style home screen and a living weather screensaver for Google TV.**
 
-Trending picks from your own apps, the weather at a glance, and a look that follows the sunset.<br>
-Open source. Built with Claude Code. One button to undo.
+A Dock of your own apps, a Top Shelf of what's worth watching, and a screensaver that shows the sky outside.<br>
+No root. Nothing uninstalled. One button to undo.
 
-[**freemytv.io**](https://freemytv.io) · [Install](#install) · [Any TV](#any-tv) · [Make it yours](#make-it-yours)
+[Install with Claude Code](#install-with-claude-code) · [Install by hand](#install-by-hand) · [Settings](#settings) · [Going back](#going-back) · [Credits](#credits)
 
-<img src=".github/preview.webp" width="880" alt="The Free My TV home screen: a glass shelf of apps, trending picks, and a drawer with the weather and crypto prices">
+![License: MIT](https://img.shields.io/badge/license-MIT-blue)
+![Android 9+](https://img.shields.io/badge/Android%20TV-9%2B-3ddc84)
+![No root](https://img.shields.io/badge/root-not%20needed-success)
+![Made with Claude Code](https://img.shields.io/badge/made%20with-Claude%20Code-d97757)
 
 </div>
 
+> A fork of [**Free My TV**](https://github.com/simbasjungles/free-my-tv) by Simba and its contributors, rebuilt around
+> a tvOS-inspired home screen and a new screensaver. It's an independent re-creation of a look: no Apple code, fonts,
+> images or videos are included.
+
 ## What you get
 
-- **No ads.** No sponsored rows, banners or autoplaying promos. Not one.
-- **Your apps, front and center.** The streaming apps you actually use, on a glass shelf. Pick them and their order right on the TV.
-- **Trending, not sponsored.** Three fresh picks every hour from what's trending this week and the latest releases, only from apps you already have. Movies and Shows get their own tabs.
-- **Weather and markets, one press away.** The hour-by-hour forecast, sunrise and sunset, and live crypto prices.
-- **Light by day, dark by night.** It follows your city's real sunset, the way your phone does.
-- **A screensaver to match.** Full-screen photos of the picks with a big glass clock.
-- **Fast.** 60 fps, every frame in 16.6 ms, on the TV's own chip. The home screen uses 96 MB of memory instead of 242 MB (−60%).<br><sub>Measured on a 98″ TCL Google TV running Android 14.</sub>
-- **Set up on the TV.** Language, temperature, theme, the weather and prices cards, which coins, and the apps on the shelf, in Free My TV's own settings.
-- **Safe.** No root. Nothing is uninstalled. One button brings back the factory home screen.
+**Home screen**
+- **A Dock and a Top Shelf.** Your streaming apps on a smoked-glass Dock; above it, a full-screen carousel of trending
+  titles that are on apps you already have. Scroll down for every app in a grid.
+- **No ads.** No sponsored rows, banners or autoplaying promos.
+- **Picks in your languages.** Say which languages you watch (for example Tamil, then Hindi), and those come first.
+- **Back opens the screensaver**, like on an Apple TV.
 
-## Install
+**Weather screensaver** (60 fps on a TV's own chip)
+- **The sky outside, drawn live.** Clouds that match the real cloud cover, rain at its real intensity, fog, snow and
+  lightning; the sun and the moon (in its real phase) orbit a big temperature.
+- **The day at a glance.** Feels-like, humidity, UV, wind, sunrise and sunset, and the next 24 hours along the bottom.
+- **Optional: prayer times.** Today's five prayers with when each one ends, worked out on the TV from the sun's
+  position: within seconds of NASA's ephemeris, no internet needed. Shafi'i or Hanafi, with your local timetable's
+  margins.
+- **Optional: a daily verse.** A short Quran verse or hadith in English each day, always whole (never cut mid-meaning).
+- **Works offline.** Prayer times, the verse and the moon need no internet; the weather shows the last forecast for up
+  to a day. If a power cut leaves the TV's clock wrong, the date and prayers hide until it's right again.
 
-About ten minutes. You need a Google TV or Android TV (Android 9 or newer) and a computer on the same Wi-Fi.
+**On TCL TVs**
+- The remote's Netflix, YouTube and Prime buttons keep working (and can open other apps).
+- The power light stays on in standby, as it should.
 
-### The easy way: Claude Code
+## Install with Claude Code
 
-1. **On the TV**, turn on developer mode: Settings → System → About → press *Android TV OS build* 7 times. Then Settings → System → Developer options → turn on **USB debugging**. Write down the TV's IP address (Settings → Network & Internet).
-2. **On your computer**, get the code:
+The easiest way: let [Claude Code](https://claude.com/claude-code) do it. About ten minutes.
+
+1. **On the TV**, turn on developer mode: Settings → System → About → press *Android TV OS build* 7 times. Then
+   Settings → System → Developer options → turn on **USB debugging**. Note the TV's IP address (Settings → Network &
+   Internet → your Wi-Fi).
+2. **On your computer** (same Wi-Fi as the TV), open Claude Code in any folder and say:
+
+   > Install https://github.com/MohamedZameell/free-my-tv-home on my TV at 192.168.1.50. I live in Chennai.
+
+   Swap in your TV's IP and your city. Want the prayer times or the daily verse? Say so too (*"with Hanafi prayer
+   times and the daily verse"*). Claude clones the repo, reads [CLAUDE.md](CLAUDE.md), installs the tools it needs,
+   builds the app with your settings and puts it on your TV, telling you each step before it does it.
+3. **When the TV asks** *Allow USB debugging?*, tick *Always allow* and press OK.
+4. **On the TV**, open *Free My TV* → *Home Screen* → *Free My TV*, and accept the debugging prompt once more.
+
+## Install by hand
+
+You need a Google TV or Android TV (Android 9 or newer) and a computer on the same Wi-Fi.
+
+1. **On the TV**, turn on USB debugging (step 1 above).
+2. **Tools:** a JDK (17+), the Android SDK command-line tools (build-tools 34+, platform android-34) and adb.
+   - **macOS:**
+     ```bash
+     brew install --cask temurin android-commandlinetools android-platform-tools
+     sdkmanager "build-tools;34.0.0" "platforms;android-34"
+     ```
+   - **Linux:** OpenJDK 17, Android's command-line tools and adb from your package manager, then the same
+     `sdkmanager` line.
+   - **Windows:** install [WSL](https://learn.microsoft.com/windows/wsl/install), then follow the Linux steps inside it.
+3. **Get the code and build:**
    ```bash
-   git clone https://github.com/simbasjungles/free-my-tv && cd free-my-tv
-   ```
-3. **Open [Claude Code](https://claude.com/claude-code) in that folder** and say:
-   > Install Free My TV on my TV at 192.168.1.50. I live in Lisbon.
-
-   It installs the tools it needs, builds the app and puts it on your TV. Swap in your TV's IP and your city.
-4. **On the TV**, open *Free My TV* → *Home Screen* → *Free My TV*, and accept the debugging prompt (tick *Always allow*).
-
-### The manual way
-
-1. **On the TV**, do step 1 above.
-2. **Tools:** a JDK (17+), the Android SDK command-line tools (build-tools 34, platform android-34) and adb. On a Mac:
-   ```bash
-   brew install --cask temurin android-commandlinetools android-platform-tools
-   sdkmanager "build-tools;34.0.0" "platforms;android-34"
-   ```
-   On Linux, get OpenJDK 17, Android's command-line tools and adb from your package manager, then run the same `sdkmanager` line. On Windows, use WSL.
-3. **Build:**
-   ```bash
+   git clone https://github.com/MohamedZameell/free-my-tv-home && cd free-my-tv-home
    ./build.sh
    ```
-   The first run creates `config.properties`. Set your city and your [TMDB key](#the-tmdb-key) there, then run it again.
+   The first run creates `config.properties`. Set your city's `latitude` and `longitude`, your country in
+   `tmdb_region`, your [TMDB key](#the-tmdb-key) and anything else from [Settings](#settings), then run `./build.sh`
+   again. It ends with `Built FreeMyTV.apk`.
 4. **Install:**
    ```bash
    adb connect 192.168.1.50:5555
@@ -71,104 +98,108 @@ About ten minutes. You need a Google TV or Android TV (Android 9 or newer) and a
 
 ## Settings
 
-The first values come from `config.properties`, created by the first build. Most of them can also be changed on the TV, in *Free My TV* → *Home Settings*, and the TV's choice wins:
+All in `config.properties` (created by the first build, never committed). Some can also be changed on the TV in
+*Free My TV* → *Home Settings*, and the TV's choice wins.
 
 | Key | What it does | Default |
 |---|---|---|
+| `latitude`, `longitude` | Your city (decimal degrees): weather, sunset, prayer times | New York |
+| `city` | The name on the weather card | `Weather` |
 | `tmdb_key` | Your free TMDB key, for the picks | empty |
 | `tmdb_region` | Your country (two letters): which titles are on which app | `US` |
-| `latitude`, `longitude` | Your city, for the weather and the sunset | New York |
-| `city` | The name on the weather card | `Weather` |
+| `picks_languages` | Languages first in the picks, e.g. `ta,hi,ml` (the first one leads) | empty |
+| `prayer_times` | Prayer times on the screensaver | `false` |
+| `prayer_school` | `shafii` or `hanafi` (the Asr time) | `shafii` |
+| `prayer_minutes` | Minutes your timetable adds after noon, Asr, sunset and dusk, e.g. `15,2,7,15` | `0,0,0,0` |
+| `daily_quote` | A short Quran verse or hadith on the screensaver each day | `false` |
 | `language` | `auto` (follows the TV), `en`, `es` or `pt` | `auto` |
-| `show_crypto` | Show Binance crypto prices on home and screensaver | `true` |
-| `currency` | Crypto prices in `USD`, `EUR`, `BRL`… | `USD` |
 | `temperature` | `C`, `F` or `auto` | `auto` |
+| `show_crypto` | Crypto prices from Binance | `true` |
+| `currency` | Crypto prices in `USD`, `EUR`, `INR`… | `USD` |
 | `disable_assistant` | Also turn off Google Assistant | `false` |
 
-Changed something? Run `./build.sh` and install again. Keep `freemytv.keystore`: updates are signed with it.
+Changed something? Run `./build.sh` and install again. **Keep `freemytv.keystore`**: updates must be signed with it.
 
 ### The TMDB key
 
-Free, and it takes two minutes: create an account at [themoviedb.org](https://www.themoviedb.org/signup), then open [Settings → API](https://www.themoviedb.org/settings/api) and request a developer key. Paste the *API Read Access Token* (or the *API Key*) after `tmdb_key=`. It's your key: `config.properties` stays out of git.
+Free, and it takes two minutes: create an account at [themoviedb.org](https://www.themoviedb.org/signup), open
+[Settings → API](https://www.themoviedb.org/settings/api) and request a developer key. Paste the *API Read Access
+Token* after `tmdb_key=`. It's yours: `config.properties` stays out of git. Without it, everything works except the
+picks.
 
 ## Going back
 
-On the TV: *Free My TV* → *Home Screen* → *Original*. The factory home screen, screensaver and every app come back exactly as they were. If the new home screen ever crashes three times in five minutes, it switches back by itself.
+On the TV: *Free My TV* → *Home Screen* → *Original*. The factory home screen, screensaver and every app come back
+exactly as they were. If the new home screen ever crashes three times in five minutes, it switches back by itself.
 
 To remove it for good, switch to *Original* first, then uninstall *Free My TV* (Settings → Apps).
 
 ## What it changes
 
 - It becomes the home screen and the screensaver.
-- It turns off, without uninstalling:
-  - the stock home screen and screensaver;
-  - Google TV's recovery home, Play Games and YouTube Music;
-  - on TCL TVs, the TCL Channel, messages, store demo, hotel menu, manuals, mirroring and logging apps;
-  - Google Assistant, only with `disable_assistant=true`.
-- On TCL TVs, the remote's Netflix, YouTube and Prime buttons keep working through a small accessibility service that only reads those buttons. Pick what each one opens in *Free My TV* → *Remote Buttons*; *Original* turns the service off.
-- Picture, sound, inputs, remote pairing, Google services and the Play Store are on a protected list, checked before every change.
-- Apps that saved a Wi-Fi network are never turned off, since Android would erase the network. If the TV's first setup saved yours, the switch asks you to forget the network and connect again in Settings first (saved networks out of range don't show there; Claude Code can remove them).
+- It turns off, without uninstalling: the stock home screen and screensaver, Google TV's recovery home, Play Games and
+  YouTube Music; on TCL TVs, the TCL Channel, messages, store demo, hotel menu, manuals, mirroring and logging apps;
+  Google Assistant only with `disable_assistant=true`.
+- Picture, sound, inputs, remote pairing, Google services and the Play Store are on a protected list, checked before
+  every change.
+- Apps that saved a Wi-Fi network are never turned off, since Android would erase the network.
 
 ## Any TV
 
-Free My TV runs on Google TV and Android TV: TCL, Sony, Hisense, Philips, Xiaomi and more, plus streamers like Chromecast with Google TV, the Google TV Streamer, onn 4K and NVIDIA Shield.
+Google TV and Android TV: TCL, Sony, Hisense, Philips, Xiaomi and more, plus Chromecast with Google TV, the Google TV
+Streamer, onn 4K and NVIDIA Shield. Built and tuned on a TCL 55Q6C (Android 14).
 
-**Samsung, LG or any other TV:** plug a Google TV streamer into HDMI and free that one. Same steps, same home screen.
+**Samsung, LG or any other TV:** plug a Google TV streamer into HDMI and set it up on that.
 
-**A different brand or model:** ask Claude. Free My TV is made to be adapted by AI. Open the folder in Claude Code and say *"set it up for my Sony"*: it reads your TV, finds its home screen and its promo apps, updates the lists below and walks you through a test. [CLAUDE.md](CLAUDE.md) tells it how.
-
-| What | Where |
-|---|---|
-| Apps to turn off | `DEBLOAT` in [`HomeMode.java`](app/src/io/freemytv/HomeMode.java) |
-| Apps never to touch | `PROTECTED` in the same file |
-| Apps on the shelf | `SHELF` in [`HomeApps.java`](app/src/io/freemytv/HomeApps.java) |
-| Your brand's live TV app | `LIVE_TV_APPS` in the same file |
-
-## Make it yours
-
-It's your code, and Claude Code finds its way around it. Try:
-
-- *"Add Crunchyroll to the shelf."*
-- *"Show the prices in euros."*
-- *"Add Spanish."*
-- *"Switch to the night look an hour after sunset."*
+**A different brand:** open the folder in Claude Code and say *"set it up for my Sony"*. It reads your TV, finds its
+home screen and promo apps, and walks you through a test. [CLAUDE.md](CLAUDE.md) tells it how.
 
 ## How it works
 
-- **A plain Android app, no Gradle, no libraries.** [`build.sh`](build.sh) runs aapt2 → javac → d8 → zipalign → apksigner and makes a 2 MB APK.
-- **It uses the TV's own ADB, from inside the TV.** The app connects to `127.0.0.1:5555` with its own key (that's the *Allow USB debugging?* prompt) and runs the same commands you would: `cmd package set-home-activity`, `settings put secure screensaver_components`, `pm disable-user`. Nothing listens to the network.
-- **Drawn by hand on one Canvas**, with Android 13 shaders for the frosted glass and the sky (plain fills on Android 9 to 12, with lighter shadows and no GPU layers on 9 to 11 for their older GPUs).
-- **A safety net.** A watchdog in a separate process brings back the stock home screen after three crashes in five minutes, and a boot check keeps your choice after TV updates.
-- **Data** from TMDB (trending titles, new releases and which app streams what in your country), Open-Meteo (forecast, sunrise and sunset), and optionally Binance (24-hour prices when `show_crypto=true`).
+- **A plain Android app, no Gradle, no libraries.** [`build.sh`](build.sh) runs aapt2 → javac → d8 → zipalign →
+  apksigner and makes a ~3 MB APK.
+- **It uses the TV's own ADB, from inside the TV** (`127.0.0.1:5555`, its own key): the same commands you would run.
+  Nothing listens to the network.
+- **Drawn by hand on one Canvas** at 60 fps, with Android 13 shaders for the glass.
 
 | File | What it is |
 |---|---|
 | [`HomeView.java`](app/src/io/freemytv/HomeView.java) | The home screen |
+| [`WeatherView.java`](app/src/io/freemytv/WeatherView.java) | The weather screensaver |
+| [`Prayers.java`](app/src/io/freemytv/Prayers.java) | Prayer times and sunrise/sunset, computed on the TV |
 | [`HomeMode.java`](app/src/io/freemytv/HomeMode.java) | Switching between Free My TV and Original |
-| [`Adb.java`](app/src/io/freemytv/Adb.java) | The TV's own ADB, from inside the TV |
 | [`Recs.java`](app/src/io/freemytv/Recs.java) | The picks (TMDB) |
 | [`HomeData.java`](app/src/io/freemytv/HomeData.java) | Weather and prices |
-| [`HomeApps.java`](app/src/io/freemytv/HomeApps.java) | The shelf, inputs and All Apps |
-| [`DreamView.java`](app/src/io/freemytv/DreamView.java) | The screensaver |
-| [`SettingsActivity.java`](app/src/io/freemytv/SettingsActivity.java) | The settings screen (the app's icon) |
-| [`Prefs.java`](app/src/io/freemytv/Prefs.java) | Settings changed on the TV |
-| [`RemoteKeys.java`](app/src/io/freemytv/RemoteKeys.java) | The TCL remote's app buttons |
+| [`HomeApps.java`](app/src/io/freemytv/HomeApps.java) | The Dock, inputs and All Apps |
+| [`StandbyLight.java`](app/src/io/freemytv/StandbyLight.java) | TCL's power light in standby |
 | [`Watchdog.java`](app/src/io/freemytv/Watchdog.java) | The safety net |
-
-The website ([freemytv.io](https://freemytv.io)) is in [`docs/`](docs): plain HTML, CSS and JS on GitHub Pages.
 
 ## Privacy
 
-No accounts, no analytics, no tracking. The app talks to TMDB, Open-Meteo (with the coordinates you set), and Binance only when `show_crypto=true`. Your settings stay on your computer and your TV.
+No accounts, no analytics, no tracking. The app talks to TMDB, Open-Meteo (with the coordinates you set), and Binance
+only when `show_crypto=true`. Your settings stay on your computer and your TV.
 
 ## Credits
 
-- Built with [Claude Code](https://claude.com/claude-code).
+- **This edition** (tvOS-style home screen, weather screensaver, prayer times, daily verse, offline mode, TCL fixes):
+  designed by **Mohamed Zameel** ([@MohamedZameell](https://github.com/MohamedZameell)) and built together with
+  **Claude** ([Claude Code](https://claude.com/claude-code), Anthropic).
+- **The original [Free My TV](https://github.com/simbasjungles/free-my-tv)**: by **Simba**
+  ([@simbasjungles](https://github.com/simbasjungles)), with Enner Pérez, Gabriel Vaz, Breno Nesto, Lucas Aureliano and Ismael Melgar. The home
+  switch, ADB-on-the-TV, safety net and much more are theirs.
+- **Quran translation:** Saheeh International, via [Tanzil](https://tanzil.net). **Hadith translations:** as published
+  on [sunnah.com](https://sunnah.com) (Sahih al-Bukhari, Sahih Muslim). Used non-commercially, with thanks; the text
+  is unchanged.
 - This product uses the TMDB API but is not endorsed or certified by [TMDB](https://www.themoviedb.org/).
 - Weather data by [Open-Meteo.com](https://open-meteo.com/) (CC BY 4.0). Prices from the [Binance](https://www.binance.com/) public API.
-- Icons: [Material Symbols](https://fonts.google.com/icons) (Apache 2.0). Font: [Inter](https://rsms.me/inter/) (SIL OFL 1.1). Coin logos: [cryptocurrency-icons](https://github.com/spothq/cryptocurrency-icons) (CC0).
-- Not affiliated with Google, TCL or any streaming service. App names and logos belong to their owners.
+- Fonts: [Antonio](https://fonts.google.com/specimen/Antonio), [JetBrains Mono](https://www.jetbrains.com/lp/mono/)
+  and [Inter](https://rsms.me/inter/) (SIL OFL 1.1). Icons: [Material Symbols](https://fonts.google.com/icons)
+  (Apache 2.0). Coin logos: [cryptocurrency-icons](https://github.com/spothq/cryptocurrency-icons) (CC0).
+- Not affiliated with Apple, Google, TCL or any streaming service. tvOS and Apple TV are trademarks of Apple Inc.;
+  app names and logos belong to their owners.
 
 ## License
 
 [MIT](LICENSE). Fork it, change it, ship it.
+
+<sub>Made with ❤️ and Claude.</sub>

@@ -9,7 +9,7 @@ import android.view.KeyEvent;
 /**
  * The remote's app buttons on TCL TVs. The stock home screen opens the apps for Netflix, YouTube and Prime (and TCL
  * Channel); with it off, the keys still arrive, so we open the app the person picked (Settings > Remote Buttons).
- * Disney and Globoplay are opened by the system itself, so they are not listed. The YouTube button (BUTTON_3) never
+ * A button can also open the CCTV's HDMI input. Disney and Globoplay are opened by the system itself, so they are not listed. The YouTube button (BUTTON_3) never
  * reaches an app's window; only the accessibility service's key filter (RemoteKeyService) sees it.
  */
 final class RemoteKeys {
@@ -33,7 +33,11 @@ final class RemoteKeys {
         String pkg = Prefs.keyApp(e.getKeyCode());
         if (pkg.isEmpty()) return false;   // "Nothing": the key goes on as if we weren't here
         if (e.getAction() == KeyEvent.ACTION_DOWN && e.getRepeatCount() == 0) {
-            Intent intent = HomeApps.launchIntent(c.getPackageManager(), pkg);
+            Intent intent = Prefs.CCTV.equals(pkg) ? HomeApps.cctvIntent(c) : HomeApps.launchIntent(c.getPackageManager(), pkg);
+            // SmartTube uninstalled: the YouTube button still opens YouTube.
+            if (intent == null && Prefs.SMARTTUBE.equals(pkg)) {
+                intent = HomeApps.launchIntent(c.getPackageManager(), "com.google.android.youtube.tv");
+            }
             AppLog.w("remote key " + e.getKeyCode() + " -> " + pkg + (intent == null ? " (not installed)" : ""));
             if (intent != null) c.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
         }

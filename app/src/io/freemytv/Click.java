@@ -16,11 +16,14 @@ import java.nio.ByteOrder;
  * screen, never inside apps.
  */
 final class Click {
+    /** Off on this TV: a silent home screen. Set to true to bring the clicks back. */
+    private static final boolean ENABLED = false;
     private static final int RATE = 48_000;
     private SoundPool pool;
     private int move, open;
 
     Click(Context c) {
+        if (!ENABLED) return;
         try {
             pool = new SoundPool.Builder().setMaxStreams(3).setAudioAttributes(new AudioAttributes.Builder()
                     .setUsage(AudioAttributes.USAGE_ASSISTANCE_SONIFICATION)

@@ -43,7 +43,7 @@ final class Recs {
     static final class Pick {
         int id;
         String kind;            // "movie" or "tv"
-        String title, backdrop, meta = "", app, pkg;
+        String title, backdrop, logo, meta = "", app, pkg;   // logo: TMDB path of the title treatment, or null
         boolean detailed;
     }
 
@@ -53,13 +53,16 @@ final class Recs {
     private static final String IMAGES = "https://image.tmdb.org/t/p/original";
     private static final long LIST_EVERY = 6 * 3600_000L;
     /** Bump when what is saved for each title changes (the saved list is discarded and fetched again). */
-    private static final int CACHE_VERSION = 3;
+    private static final int CACHE_VERSION = 5;
     private static final int MANHA = 0, TARDE = 1, NOITE = 2;
     static final String[] PERIOD_LABEL = {"PARA ESTA MANHÃ", "PARA ESTA TARDE", "PARA ESTA NOITE"};
     static final String[] PERIOD_LABEL_EN = {"THIS MORNING", "THIS AFTERNOON", "TONIGHT"};
     static final String[] PERIOD_LABEL_ES = {"PARA ESTA MAÑANA", "PARA ESTA TARDE", "PARA ESTA NOCHE"};
     /** Service name on TMDB (part of the name, lowercase) → TV app (HomeApps key, package). */
     private static final String[][] SERVICES = {
+        // Before Disney: in India, Disney+ is part of JioHotstar ("JioHotstar", earlier "Disney Plus Hotstar").
+        {"hotstar", "hotstar", "in.startv.hotstar"},
+        {"sun nxt", "sunnxt", "com.suntv.sunnxt"},
         {"netflix", "netflix", "com.netflix.ninja"},
         {"prime video", "prime", "com.amazon.amazonvideo.livingroom"},
         {"disney", "disney", "com.disney.disneyplus"},
@@ -73,6 +76,8 @@ final class Recs {
     private static final Map<String, String> SERVICE_NAME = new HashMap<>();
     static {
         SERVICE_NAME.put("netflix", "Netflix");
+        SERVICE_NAME.put("hotstar", "JioHotstar");
+        SERVICE_NAME.put("sunnxt", "Sun NXT");
         SERVICE_NAME.put("prime", "Prime Video");
         SERVICE_NAME.put("disney", "Disney+");
         SERVICE_NAME.put("hulu", "Hulu");
@@ -99,12 +104,13 @@ final class Recs {
     private final List<Listener> listeners = new ArrayList<>();
     private final Map<String, Backdrop> images = new LinkedHashMap<>();   // this hour's, built and ready to draw
     private final java.util.Set<String> pending = new java.util.HashSet<>();
+    private final Map<String, android.graphics.Bitmap> logos = new LinkedHashMap<>();   // title logos, ready to draw
+    private final java.util.Set<String> logoPending = new java.util.HashSet<>();
     private volatile List<Pick> picks = new ArrayList<>();
     private volatile int period = -1;
     private volatile long listAt;
     private volatile boolean fetching;
     private volatile String error = "";
-    private volatile boolean light;     // light design: builds only the cards (all three tabs' cards fit in memory)
     private volatile long failedAt, keyStamp;
     private volatile String listLanguage = "";   // language used for the saved titles, genres and texts
 
@@ -276,76 +282,6 @@ final class Recs {
         });
     }
 
-    /** Home screen design: the ready images are rebuilt for it (the light design uses cards, not the whole photo). */
-    void setLight(boolean value) {
-        if (value == light) return;
-        light = value;
-        synchronized (images) {
-            images.clear();
-        }
-    }
-
-    /**
-     * Screensaver: the picks with an app on the TV and an image already on disk, starting with this hour's (the
-     * featured one first), never two from the same franchise.
-     */
-    List<Pick> showcase() {
-        List<Pick> out = new ArrayList<>();
-        if (!hasKey(context)) return out;
-        java.util.Set<String> seen = new java.util.HashSet<>();
-        for (Pick p : wanted()) if (hasImage(p) && seen.add(franchise(p.title))) out.add(p);
-        Map<String, Boolean> have = new HashMap<>();
-        for (Pick p : picks) {
-            if (p.detailed && p.pkg != null && have.computeIfAbsent(p.pkg, this::installed) && hasImage(p)
-                    && seen.add(franchise(p.title))) out.add(p);
-        }
-        return out;
-    }
-
-    /** The pick's original image if it's already on disk (the screensaver loads it in its own way), or null. */
-    File readyImage(Pick p) {
-        return hasImage(p) ? imageFile(p) : null;
-    }
-
-    /**
-     * While the screensaver is showing: details and image for every pick in the list (not just this hour's), one at a
-     * time in the background, so it has more photos. Not used otherwise.
-     */
-    void prefetchAll() {
-        if (!hasKey(context) || fetching) return;
-        long sinceFail = System.currentTimeMillis() - failedAt;
-        if (failedAt != 0 && sinceFail >= 0 && sinceFail < 10 * 60_000L) return;
-        List<Pick> todo = new ArrayList<>();
-        for (Pick p : picks) if (!p.detailed || (p.pkg != null && !hasImage(p))) todo.add(p);
-        if (todo.isEmpty()) return;
-        fetching = true;
-        io.execute(() -> {
-            int failures = 0;
-            String last = "";
-            try {
-                // One failing title (gone from TMDB, an image that won't download) doesn't stop the others.
-                for (Pick p : todo) {
-                    try {
-                        if (!p.detailed) fetchDetails(p);
-                        if (p.pkg != null) download(p);
-                    } catch (Exception e) {
-                        failures++;
-                        last = e.getMessage() == null ? e.toString() : e.getMessage();
-                    }
-                }
-                save();
-                if (failures == todo.size()) {
-                    error = last;
-                    failedAt = System.currentTimeMillis();
-                    AppLog.w("recommendations (screensaver): " + last);
-                }
-            } finally {
-                fetching = false;
-                notifyListeners();
-            }
-        });
-    }
-
     /** This hour's picks for the three tabs (Explore, Movies, Shows), without repeats. */
     List<Pick> wanted() {
         List<Pick> out = new ArrayList<>();
@@ -406,9 +342,28 @@ final class Recs {
         List<Pick> newMovies = new ArrayList<>(), newShows = new ArrayList<>();
         for (int i = 0; i < movies.length(); i++) add(newMovies, movies.getJSONObject(i), "movie");
         for (int i = 0; i < shows.length(); i++) add(newShows, shows.getJSONObject(i), "tv");
-        // Trending first, then the new releases; movies and shows alternating, without repeats, up to 24.
+        // 3. The languages in the config's picks_languages: the first one leads, the rest follow (recent and popular
+        //    on the TV's services).
+        List<Pick> firstMovies = new ArrayList<>(), firstShows = new ArrayList<>();
+        List<Pick> otherMovies = new ArrayList<>(), otherShows = new ArrayList<>();
+        if (!FIRST_LANGUAGE.isEmpty()) {
+            try {
+                discover(firstMovies, "movie", FIRST_LANGUAGE, common);
+                discover(firstShows, "tv", FIRST_LANGUAGE, common);
+                if (!OTHER_LANGUAGES.isEmpty()) {
+                    discover(otherMovies, "movie", OTHER_LANGUAGES, common);
+                    discover(otherShows, "tv", OTHER_LANGUAGES, common);
+                }
+            } catch (Exception e) {
+                AppLog.w("recommendations (languages): " + e.getMessage());
+            }
+        }
+        // Those languages first, then what's trending, then the new releases; movies and shows alternating, without
+        // repeats, up to 24.
         List<Pick> list = new ArrayList<>();
         java.util.Set<String> seen = new java.util.HashSet<>();
+        alternate(list, seen, firstMovies, firstShows, 10);
+        alternate(list, seen, otherMovies, otherShows, 16);
         alternate(list, seen, hotMovies, hotShows, 24);
         alternate(list, seen, newMovies, newShows, 24);
         if (list.isEmpty()) throw new IOException("TMDB returned no recommendations");
@@ -416,6 +371,26 @@ final class Recs {
         period = p;
         listAt = System.currentTimeMillis();
         listLanguage = Ui.language;
+    }
+
+    /** picks_languages split: the first code, and the others joined by "|" (TMDB's "or"). */
+    private static final String FIRST_LANGUAGE, OTHER_LANGUAGES;
+    static {
+        String[] codes = Config.PICKS_LANGUAGES.replace(" ", "").split(",");
+        FIRST_LANGUAGE = codes[0];
+        StringBuilder rest = new StringBuilder();
+        for (int i = 1; i < codes.length; i++) if (!codes[i].isEmpty()) rest.append(rest.length() > 0 ? "|" : "").append(codes[i]);
+        OTHER_LANGUAGES = rest.toString();
+    }
+
+    /** Popular titles in these original languages from the past 2 years (movies) or with an episode in the past year. */
+    private void discover(List<Pick> out, String kind, String languages, String common) throws Exception {
+        String dates = kind.equals("movie")
+                ? "&primary_release_date.gte=" + day(-730) + "&primary_release_date.lte=" + day(0)
+                : "&air_date.gte=" + day(-365) + "&air_date.lte=" + day(0);
+        JSONArray found = get("/discover/" + kind + "?vote_count.gte=5&with_original_language=" + URLEncoder.encode(languages, "UTF-8")
+                + dates + common).getJSONArray("results");
+        for (int i = 0; i < found.length() && out.size() < 10; i++) add(out, found.getJSONObject(i), kind);
     }
 
     /** Language of titles and genres; the services come from the region. */
@@ -455,6 +430,7 @@ final class Recs {
                 + "?language=" + lang() + "&append_to_response=watch/providers,images&include_image_language=null," + Ui.language + ",en");
         String best = bestBackdrop(o.optJSONObject("images"));
         if (best != null) p.backdrop = best;
+        p.logo = bestLogo(o.optJSONObject("images"));
         List<String> parts = new ArrayList<>();
         JSONArray genres = o.optJSONArray("genres");
         if (p.kind.equals("tv")) parts.add(Ui.tr("Série", "Series"));
@@ -523,6 +499,81 @@ final class Recs {
             }
         }
         return best;
+    }
+
+    /**
+     * The title's logo (its "title treatment", like tvOS shows over the artwork): in the UI's language, else English,
+     * else one with no language; the highest rated. PNG only (they have transparency).
+     */
+    private static String bestLogo(JSONObject images) {
+        JSONArray list = images == null ? null : images.optJSONArray("logos");
+        String best = null;
+        double bestScore = -1;
+        for (int i = 0; list != null && i < list.length(); i++) {
+            JSONObject b = list.optJSONObject(i);
+            String path = b == null ? "" : b.optString("file_path", "");
+            if (!path.endsWith(".png")) continue;
+            String lang = b.isNull("iso_639_1") ? "" : b.optString("iso_639_1");
+            double score = (lang.equals(Ui.language) ? 3e3 : lang.equals("en") ? 2e3 : lang.isEmpty() ? 1e3 : 0) + b.optDouble("vote_average", 0);
+            if (score > bestScore && score >= 1e3) {
+                bestScore = score;
+                best = path;
+            }
+        }
+        return best;
+    }
+
+    /** The pick's logo, ready to draw (or null: downloads it in the background and notifies when it's ready). */
+    android.graphics.Bitmap logo(Pick p) {
+        if (p == null || p.logo == null) return null;
+        final String key = p.logo;
+        synchronized (logos) {
+            android.graphics.Bitmap b = logos.get(key);
+            if (b != null) return b;
+            if (!logoPending.add(key)) return null;
+        }
+        io.execute(() -> {
+            try {
+                File f = new File(new File(context.getCacheDir(), "logos"), key.replace("/", ""));
+                if (!f.exists()) {
+                    //noinspection ResultOfMethodCallIgnored
+                    f.getParentFile().mkdirs();
+                    File part = new File(f.getPath() + ".part");
+                    HttpURLConnection c = (HttpURLConnection) new URL(IMAGES + key).openConnection();
+                    c.setConnectTimeout(8000);
+                    c.setReadTimeout(20000);
+                    try (InputStream in = c.getInputStream(); FileOutputStream out = new FileOutputStream(part)) {
+                        byte[] buffer = new byte[16384];
+                        int n;
+                        while ((n = in.read(buffer)) > 0) out.write(buffer, 0, n);
+                    } finally {
+                        c.disconnect();
+                    }
+                    if (!part.renameTo(f)) throw new IOException("couldn't save the logo");
+                    prune(f.getParentFile());
+                }
+                // The original, halved while still wider than it's drawn (760 px; a few are 4000 wide).
+                BitmapFactory.Options opts = new BitmapFactory.Options();
+                opts.inJustDecodeBounds = true;
+                BitmapFactory.decodeFile(f.getPath(), opts);
+                int sample = 1;
+                while (opts.outWidth / (sample * 2) >= 800) sample *= 2;
+                opts = new BitmapFactory.Options();
+                opts.inSampleSize = sample;
+                android.graphics.Bitmap b = BitmapFactory.decodeFile(f.getPath(), opts);
+                if (b == null) throw new IOException("unreadable logo");
+                synchronized (logos) {
+                    logos.put(key, Ui.frozen(b));
+                    while (logos.size() > 12) logos.remove(logos.keySet().iterator().next());
+                }
+                notifyListeners();
+            } catch (IOException | RuntimeException | OutOfMemoryError e) {
+                AppLog.w("recommendation logo: " + e.getMessage());
+            } finally {
+                synchronized (logos) { logoPending.remove(key); }
+            }
+        });
+        return null;
     }
 
     private static String[] service(String name) {
@@ -607,12 +658,10 @@ final class Recs {
             Bitmap b = BitmapFactory.decodeFile(f.getPath(), opts);
             if (b == null) throw new IOException("unreadable image");
             AppLog.w("backdrop \u201c" + p.title + "\u201d: " + bounds.outWidth + "×" + bounds.outHeight);
-            boolean forLight = light;
-            Backdrop backdrop = Backdrop.make(b, forLight);
-            if (forLight != light) return;   // the design changed midway: this one is stale
+            Backdrop backdrop = Backdrop.make(b);
             synchronized (images) {
                 images.put(p.backdrop, backdrop);
-                while (images.size() > (forLight ? 10 : 4)) images.remove(images.keySet().iterator().next());
+                while (images.size() > 4) images.remove(images.keySet().iterator().next());
             }
             notifyListeners();
         } catch (IOException | RuntimeException | OutOfMemoryError e) {
@@ -639,6 +688,7 @@ final class Recs {
             JSONArray a = new JSONArray();
             for (Pick p : picks) {
                 a.put(new JSONObject().put("id", p.id).put("kind", p.kind).put("title", p.title).put("backdrop", p.backdrop)
+                        .put("logo", p.logo == null ? "" : p.logo)
                         .put("meta", p.meta).put("app", p.app == null ? "" : p.app).put("pkg", p.pkg == null ? "" : p.pkg)
                         .put("detailed", p.detailed));
             }
@@ -659,6 +709,7 @@ final class Recs {
             p.kind = o.optString("kind");
             p.title = o.optString("title");
             p.backdrop = o.optString("backdrop");
+            p.logo = o.optString("logo").isEmpty() ? null : o.optString("logo");
             p.meta = o.optString("meta");
             p.app = o.optString("app").isEmpty() ? null : o.optString("app");
             p.pkg = o.optString("pkg").isEmpty() ? null : o.optString("pkg");

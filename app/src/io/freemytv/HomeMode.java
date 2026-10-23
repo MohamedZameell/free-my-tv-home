@@ -63,6 +63,8 @@ final class HomeMode {
         "com.tcl.messagebox", "com.tcl.usercenter",                                   // TCL messages and account
         "com.tcl.exhibit", "com.tcl.esticker", "com.tcl.hotelmenu",                   // store demo, hotel menu
         "com.tcl.repairguide", "com.tcl.ocean.instructions", "com.tcl.logkit",        // repair guide, manual, logs
+        // Google
+        "android.autoinstalls.config.google.gtvpai",                                   // Play Auto Installs: puts partner apps on the TV by itself
     };
 
     /** The voice assistant, only with disable_assistant=true in config.properties (the mic button stops working). */
@@ -353,11 +355,13 @@ final class HomeMode {
                 Set<String> owners = wifiOwners(adb);
                 boolean reverted = s.optBoolean("homeReverted");
                 String home = originalHome(s);
-                Set<String> wanted = new HashSet<>(stringList(s, "disabled"));
+                // Only what the lists name now: an app taken off a list (TCL's Alexa) stays on once turned back on.
+                Set<String> wanted = new HashSet<>();
                 for (String pkg : targets(home, s.optString("originalDream", ""), s.optBoolean("setupHome", true))) {
                     if (!reverted || !(pkg.equals(packageOf(home)) || pkg.equals(GOOGLE_SETUP))) wanted.add(pkg);
                 }
                 Set<String> disabled = new HashSet<>(stringList(s, "disabled"));
+                disabled.removeIf(pkg -> !wanted.contains(pkg) && !disabledNow.contains(pkg));
                 for (String pkg : sorted(wanted)) {
                     if (PROTECTED.contains(pkg) || !present.contains(pkg) || owners.contains(pkg)) continue;
                     if (disabledNow.contains(pkg)) {

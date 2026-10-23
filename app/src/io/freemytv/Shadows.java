@@ -10,11 +10,12 @@ import android.graphics.RectF;
 import java.util.HashMap;
 
 /**
- * Blurred rounded-rectangle shadows for older GPUs. A BlurMaskFilter is rasterized on the CPU and uploaded again every
- * time the shape changes size (every frame of a focus animation): on a Mali-450 (Mi Box 3, Android 9) that alone took
- * ~40 ms a frame. Here each (corner radius, blur) is blurred once into a small alpha bitmap and drawn as a nine-slice
- * (corners as they are, edges and center stretched), tinted with the paint's color.
- * Android 12+ keeps drawing the real BlurMaskFilter.
+ * Blurred rounded-rectangle shadows. A BlurMaskFilter is rendered again every time the shape changes size on screen
+ * (every frame of a focus animation): on a Mali-450 (Mi Box 3, Android 9) that alone took ~40 ms a frame, and on
+ * Android 12+ each one left a GPU render target behind (TCL Q6C: ~80 MB of them, which pushed the app tiles out of the
+ * texture cache, so they were uploaded again on most frames). Here each (corner radius, blur) is blurred once into a
+ * small alpha bitmap and drawn as a nine-slice (corners as they are, edges and center stretched), tinted with the
+ * paint's color: the same Gaussian, since a rounded rectangle's blur is constant along its straight edges.
  */
 final class Shadows {
     private final HashMap<Long, Bitmap> cache = new HashMap<>();
@@ -26,10 +27,6 @@ final class Shadows {
 
     /** Draws `shape` (radius `r`) with `paint`, whose BlurMaskFilter was made with radius `blur`. */
     void draw(Canvas c, RectF shape, float r, float blur, Paint paint) {
-        if (!Ui.LEGACY) {
-            c.drawRoundRect(shape, r, r, paint);
-            return;
-        }
         int radius = Math.max(0, Math.round(r)), b = Math.max(1, Math.round(blur));
         int m = (int) Math.ceil(b * 1.8f) + 1;        // how far the blur spreads outside the shape
         int corner = radius + 2 * m;                  // the slice that holds the curve and the blur on both sides of it
@@ -74,7 +71,7 @@ final class Shadows {
         p.setColor(0xFF000000);
         p.setMaskFilter(new BlurMaskFilter(b, BlurMaskFilter.Blur.NORMAL));
         new Canvas(full).drawRoundRect(m, m, w - m, h - m, radius, radius, p);
-        mask = full.extractAlpha();
+        mask = Ui.frozen(full.extractAlpha());
         full.recycle();
         if (cache.size() > 64) cache.clear();     // focus animations step through a few sizes; keep it bounded
         cache.put(key, mask);

@@ -9,3 +9,6 @@ out/
 
 # macOS
 .DS_Store
+
+# Apple SF Pro (personal use only, licensed for Apple platforms: never publish)
+app/assets/fonts/sf/

@@ -91,6 +91,17 @@
             </intent-filter>
         </activity>
 
+        <!-- Back on the home screen: the screensaver right away, like tvOS (ScreensaverActivity). -->
+        <activity
+            android:name=".ScreensaverActivity"
+            android:process=":home"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:screenOrientation="landscape"
+            android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenSize|screenLayout|smallestScreenSize|uiMode|density|fontScale|locale|layoutDirection"
+            android:theme="@style/FreeMyTV.Home" />
+
         <service
             android:name=".Screensaver"
             android:process=":home"

@@ -1,18 +1,18 @@
 # Free My TV: notes for Claude
 
-A home screen for Google TV and Android TV that replaces the stock one, plus a settings app that switches between
-Free My TV and the TV's original home screen. A plain Android app in Java, built without Gradle by `build.sh`.
-The website (freemytv.io) is in `docs/`: static HTML, CSS and JS, no build step. A push to `main` that changes it
-publishes it to GitHub Pages (`.github/workflows/pages.yml`). `docs/index.html` (English) and `docs/pt/index.html`
-(Brazilian Portuguese) are the same page in two languages, so change both; visitors from Brazil land on the
-Portuguese one by themselves, and the PT/EN switch in the menu is remembered.
+Free My TV Home: a tvOS-style home screen and a weather screensaver for Google TV and Android TV, replacing the
+stock ones, plus a settings app that switches between Free My TV and the TV's original home screen. A fork of
+github.com/simbasjungles/free-my-tv. A plain Android app in Java, built without Gradle by `build.sh`.
 
 The person you're helping may not be technical. Keep it short and friendly, say what you're about to do on their TV
 before you do it, and let them do the taps on the TV.
 
 ## Installing it for someone
 
-1. **Ask** for the TV's IP address and their city, if they didn't say.
+0. **Pointed here by a link?** If you're not inside this repo yet, clone it first
+   (`git clone https://github.com/MohamedZameell/free-my-tv-home && cd free-my-tv-home`) and work from there.
+1. **Ask** for the TV's IP address and their city, if they didn't say. Ask once whether they want the screensaver's
+   prayer times (and Shafi'i or Hanafi) and the daily Quran verse / hadith; both are off unless they say yes.
 2. **Tools:** a JDK 17+, the Android SDK command-line tools (build-tools 34+, platform android-34) and adb. Check
    what's already there (`java -version`, `$ANDROID_HOME`, `adb version`) and install only what's missing.
    - macOS: `brew install --cask temurin android-commandlinetools android-platform-tools`, then
@@ -21,10 +21,13 @@ before you do it, and let them do the taps on the TV.
    - Windows: WSL, then as on Linux.
 3. **Settings:** run `./build.sh` once; it creates `config.properties`. Fill in `latitude` and `longitude` (decimal
    degrees) and `city` for their city, `tmdb_region` (two-letter country), `show_crypto`, `currency` and `temperature` to match.
+   `picks_languages` (TMDB codes, first one leads) if they watch non-English titles. If they asked for prayer times:
+   `prayer_times=true`, `prayer_school` (`shafii`/`hanafi`), and `prayer_minutes` if they have a local timetable to
+   match (minutes after noon, Asr, sunset, dusk). `daily_quote=true` if they want the verse.
 4. **The TMDB key is theirs and secret.** Ask them to create one (free: themoviedb.org → Settings → API) and paste it
    after `tmdb_key=` in `config.properties` themselves. Don't ask for it in the chat, never print it, never commit
    it. If they paste it in the chat anyway, put it only in `config.properties`.
-   Without a key everything works except the picks and the screensaver photos.
+   Without a key everything works except the picks.
 5. **Build:** `./build.sh` → `FreeMyTV.apk`. Keep `freemytv.keystore`: updates must be signed with the same key.
 6. **Install:** `adb connect <IP>:5555`. The TV asks *Allow USB debugging?*: tell them to accept and tick *Always
    allow*. Then `adb install -r FreeMyTV.apk`. On TCL, also `adb shell "appops set io.freemytv AUTO_START allow || appops set io.freemytv APP_AUTO_START allow"`

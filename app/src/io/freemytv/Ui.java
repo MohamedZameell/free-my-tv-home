@@ -2,6 +2,7 @@ package io.freemytv;
 
 import android.content.Context;
 import android.content.res.AssetManager;
+import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.Rect;
@@ -27,11 +28,23 @@ final class Ui {
 
     /** Android 9 to 11: older TVs and boxes, whose GPUs need the cheaper drawing paths (Shadows, rounded images). */
     static final boolean LEGACY = Build.VERSION.SDK_INT < 31;
+
+    /**
+     * A read-only copy of a finished bitmap (the same one if it already is). The GPU keeps a read-only bitmap's texture;
+     * one that can still change is copied and uploaded again each time a layer that draws it is redrawn (measured: the
+     * app tiles ~once a frame, with their mipmaps).
+     */
+    static Bitmap frozen(Bitmap b) {
+        if (b == null || !b.isMutable()) return b;
+        Bitmap copy = Bitmap.createBitmap(b);
+        copy.setHasMipMap(b.hasMipMap());
+        return copy;
+    }
     static final Locale PT = new Locale("pt", "BR");
     /** English, Portuguese or Spanish, from the settings or, with "auto", the TV's own language. */
     static volatile String language = language();
     static volatile boolean en = "en".equals(language), es = "es".equals(language);
-    static Typeface thin, light, displayMedium, displaySemibold, regular, medium, semibold;
+    static Typeface thin, light, displayMedium, displaySemibold, displayBold, regular, medium, semibold;
     private static boolean loaded;
     private static final Rect BOUNDS = new Rect();
     private static final RectF OVAL = new RectF();
@@ -40,13 +53,29 @@ final class Ui {
         if (loaded) return;
         loaded = true;
         AssetManager a = c.getAssets();
-        thin = font(a, 32, 200);
-        light = font(a, 32, 300);
-        displayMedium = font(a, 32, 500);
-        displaySemibold = font(a, 32, 600);
-        regular = font(a, 14, 400);
-        medium = font(a, 14, 500);
-        semibold = font(a, 14, 600);
+        thin = font(a, 32, 200, "Display-Thin");
+        light = font(a, 32, 300, "Display-Light");
+        displayMedium = font(a, 32, 500, "Display-Medium");
+        displaySemibold = font(a, 32, 600, "Display-Semibold");
+        displayBold = font(a, 32, 700, "Display-Bold");
+        regular = font(a, 14, 400, "Text-Regular");
+        medium = font(a, 14, 500, "Text-Medium");
+        semibold = font(a, 14, 600, "Text-Semibold");
+    }
+
+    /**
+     * SF Pro, Apple TV's own font, when its files are in assets/fonts/sf (a personal build only: it's licensed for Apple
+     * platforms, so it's git-ignored and never published); otherwise Inter.
+     */
+    private static Typeface font(AssetManager a, int opticalSize, int weight, String sf) {
+        String file = "fonts/sf/SF-Pro-" + sf + ".otf";
+        if (has(a, file)) {
+            try {
+                return Typeface.createFromAsset(a, file);
+            } catch (RuntimeException ignored) {
+            }
+        }
+        return font(a, opticalSize, weight);
     }
 
     /** Inter at an optical size (14 = text, 32 = display) and weight; the system font if the file is missing. */

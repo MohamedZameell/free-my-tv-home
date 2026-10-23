@@ -17,8 +17,10 @@ import android.graphics.LinearGradient;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.RadialGradient;
+import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.Shader;
+import android.graphics.Typeface;
 import android.graphics.drawable.AdaptiveIconDrawable;
 import android.graphics.drawable.Drawable;
 import android.media.tv.TvContract;
@@ -76,12 +78,18 @@ final class HomeApps {
      * Apps on the home shelf, in this order, when installed (up to MAX_SHELF): key, name, package, brand color (for
      * its logo on glass) and how to lift the logo from the app's TV art: "tint" = a white logo takes the art's
      * background color (Prime Video, Globoplay); "play" = the white triangle inside the red button stays white
-     * (YouTube); empty = the art's colors as they are. Last, a visual size tweak for the logo. Edit freely.
+     * (YouTube); empty = the art's colors as they are. Then a visual size tweak for the logo. Last, optionally, the app
+     * this one stands in for: it takes that app's spot, name and art (SmartTube shows as YouTube), and that app leaves
+     * the shelf (it stays in All Apps). Edit freely.
      */
     private static final String[][] SHELF = {
         {"netflix", "Netflix", "com.netflix.ninja", "E50914", "", "1"},
+        {"sunnxt", "Sun NXT", "com.suntv.sunnxt", "F26522", "", "1"},
+        // SmartTube (open source, no ads) in YouTube's place, looking like YouTube; without it, the official app.
+        {"youtube", "YouTube", "org.smarttube.stable", "FF0033", "play", "1", "com.google.android.youtube.tv"},
         {"youtube", "YouTube", "com.google.android.youtube.tv", "FF0033", "play", "1"},
         {"prime", "Prime Video", "com.amazon.amazonvideo.livingroom", "1A98FF", "tint", "0.96"},
+        {"hotstar", "JioHotstar", "in.startv.hotstar", "1F80E0", "", "1"},
         {"disney", "Disney+", "com.disney.disneyplus", "1838C8", "", "1"},
         {"max", "Max", "com.wbd.stream", "6C3BE0", "", "1.32"},
         {"appletv", "Apple TV", "com.apple.atve.androidtv.appletv", "B8BCC6", "", "1.1"},
@@ -129,17 +137,70 @@ final class HomeApps {
                 it.label = ri != null ? String.valueOf(ri.loadLabel(pm)) : pkg;
                 it.tile = appTile(c, null, pkg, 0);
             } else {
+                String art = d.length > 6 && launchIntent(pm, d[6]) != null ? d[6] : d[2];
                 it.key = d[0];
                 it.label = d[1];
-                it.tile = appTile(c, d[0], d[2], 0xFF000000 | Integer.parseInt(d[3], 16));
-                it.logo = shelfLogo(c, d[0], d[2], d[4], extract);
+                it.tile = appTile(c, d[0], art, 0xFF000000 | Integer.parseInt(d[3], 16));
+                it.logo = shelfLogo(c, d[0], art, d[4], extract);
                 if (it.logo != null) it.logoInk = ink(it.logo);
                 it.logoDark = ownLogoCached(c, d[0] + "-dark");
                 it.logoScale = Float.parseFloat(d[5]);
             }
             items.add(it);
         }
+        Item cam = shelfInput(c);
+        if (cam != null) items.add(cam);
         return items;
+    }
+
+    /** HDMI port pinned to the end of the shelf as its own card (the CCTV), whatever apps are picked in Settings. */
+    private static final String SHELF_INPUT = "3", SHELF_INPUT_LABEL = "CCTV";
+
+    private static Item shelfInput(Context c) {
+        for (Item it : inputs(c, true)) {
+            if (!SHELF_INPUT.equals(it.number)) continue;
+            it.key = "input-cctv";
+            it.label = SHELF_INPUT_LABEL;
+            it.logo = Ui.frozen(labelLogo(SHELF_INPUT_LABEL));
+            it.logoScale = 0.8f;
+            it.logoInk = ink(it.logo);
+            it.connected = true;
+            return it;
+        }
+        return null;
+    }
+
+    /** Opens the CCTV's HDMI input (a remote button can be set to it), or null when that input isn't there. */
+    static Intent cctvIntent(Context c) {
+        Item cam = shelfInput(c);
+        return cam == null ? null : new Intent(Intent.ACTION_VIEW, TvContract.buildChannelUriForPassthroughInput(cam.inputId));
+    }
+
+    /** A logo drawn from text, for cards with no app art: a red "recording" dot and the name in white. */
+    private static Bitmap labelLogo(String text) {
+        Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
+        p.setTypeface(Ui.semibold != null ? Ui.semibold : Typeface.DEFAULT_BOLD);
+        p.setTextSize(96);
+        Rect bounds = new Rect();
+        p.getTextBounds(text, 0, text.length(), bounds);
+        float dot = bounds.height() * 0.42f, gap = dot * 0.8f;
+        Bitmap b = Bitmap.createBitmap((int) Math.ceil(dot + gap + bounds.width()), bounds.height(), Bitmap.Config.ARGB_8888);
+        Canvas cv = new Canvas(b);
+        p.setColor(0xFFFF3B30);
+        cv.drawCircle(dot / 2, bounds.height() / 2f, dot / 2, p);
+        p.setColor(0xFFFFFFFF);
+        cv.drawText(text, dot + gap - bounds.left, -bounds.top, p);
+        return b;
+    }
+
+    private static android.content.pm.ApplicationInfo appInfo(PackageManager pm, String pkg) {
+        try {
+            return pm.getApplicationInfo(pkg, 0);
+        } catch (PackageManager.NameNotFoundException e) {
+            android.content.pm.ApplicationInfo info = new android.content.pm.ApplicationInfo();
+            info.packageName = pkg;
+            return info;
+        }
     }
 
     private static String[] known(String pkg) {
@@ -153,8 +214,25 @@ final class HomeApps {
         if (custom != null) return custom;
         List<String> out = new ArrayList<>();
         PackageManager pm = c.getPackageManager();
-        for (String[] d : SHELF) if (out.size() < MAX_SHELF && launchIntent(pm, d[2]) != null) out.add(d[2]);
+        Set<String> replaced = new HashSet<>();
+        for (String[] d : SHELF) if (d.length > 6 && launchIntent(pm, d[2]) != null) replaced.add(d[6]);
+        for (String[] d : SHELF) {
+            if (out.size() < MAX_SHELF && !replaced.contains(d[2]) && launchIntent(pm, d[2]) != null) out.add(d[2]);
+        }
         return out;
+    }
+
+    /**
+     * An app's name in All Apps when a stand-in has its shelf spot: the official YouTube (kept for casting from a
+     * phone, which SmartTube can't receive) reads "YouTube Cast", so the two YouTubes are told apart.
+     */
+    private static String gridLabel(Context c, String pkg, String label) {
+        if (!"com.google.android.youtube.tv".equals(pkg)) return label;
+        PackageManager pm = c.getPackageManager();
+        for (String[] d : SHELF) {
+            if (d.length > 6 && d[6].equals(pkg) && launchIntent(pm, d[2]) != null) return "YouTube Cast";
+        }
+        return label;
     }
 
     /** Every app the shelf could hold, as {package, name}: the ones from SHELF first, then the other TV apps by name. */
@@ -162,7 +240,11 @@ final class HomeApps {
         PackageManager pm = c.getPackageManager();
         List<String[]> out = new ArrayList<>();
         Set<String> seen = new HashSet<>();
-        for (String[] d : SHELF) if (launchIntent(pm, d[2]) != null && seen.add(d[2])) out.add(new String[] {d[2], d[1]});
+        for (String[] d : SHELF) {
+            // A stand-in shows its real name too here ("YouTube (SmartTube)"), next to the app it stands in for.
+            String name = d.length > 6 ? d[1] + " (" + String.valueOf(pm.getApplicationLabel(appInfo(pm, d[2]))) + ")" : d[1];
+            if (launchIntent(pm, d[2]) != null && seen.add(d[2])) out.add(new String[] {d[2], name});
+        }
         List<String[]> more = new ArrayList<>();
         Intent query = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER);
         for (ResolveInfo ri : pm.queryIntentActivities(query, 0)) {
@@ -222,6 +304,18 @@ final class HomeApps {
         it.pkg = pkg;
         it.label = label;
         return it;
+    }
+
+    /** The inputs after the apps in the grid (live TV and every HDMI port), as cards with their icon. */
+    static List<Item> gridInputs(Context c) {
+        List<Item> items = allInputs(c);
+        for (Item it : items) {
+            if (it.kind == INPUT && SHELF_INPUT.equals(it.number)) it.label = SHELF_INPUT_LABEL;
+            // The Airtel DTH box names itself "XstreamIPTV1-V" over HDMI-CEC (Airtel's set-top boxes are "Xstream").
+            if (it.kind == INPUT && it.label != null && it.label.toLowerCase(Locale.ROOT).startsWith("xstream")) it.label = "Airtel";
+            it.tile = symbolTile(c, "grid-" + it.key + "-" + it.symbol, it.symbol);
+        }
+        return items;
     }
 
     /** For the bottom drawer: live TV and every HDMI input (the ones with no device are shown dimmed). */
@@ -316,8 +410,8 @@ final class HomeApps {
     /** Installed, enabled TV apps that are not on the home screen (the TV's Settings is among them), plus our own. */
     static List<Item> others(Context c) {
         PackageManager pm = c.getPackageManager();
-        Set<String> skip = new HashSet<>();
-        for (String[] d : SHELF) skip.add(d[2]);
+        // The apps on the shelf are its first row already (as on Apple TV); every other app comes here.
+        Set<String> skip = new HashSet<>(shelfPackages(c));
         skip.addAll(java.util.Arrays.asList(LIVE_TV_APPS));
         skip.add(c.getPackageName());
         skip.addAll(HIDDEN);
@@ -331,7 +425,7 @@ final class HomeApps {
             it.kind = APP;
             it.pkg = pkg;
             it.key = pkg;
-            it.label = String.valueOf(ri.loadLabel(pm));
+            it.label = gridLabel(c, pkg, String.valueOf(ri.loadLabel(pm)));
             it.tile = appTile(c, null, pkg, 0);
             items.add(it);
         }
@@ -455,6 +549,7 @@ final class HomeApps {
             }
         }
         if (logo != null) logo.setHasMipMap(true);
+        logo = Ui.frozen(logo);
         synchronized (LOGOS) {
             LOGOS.put(key, logo);
         }
@@ -716,6 +811,7 @@ final class HomeApps {
         Bitmap tile = logo != null ? logoTile(logo, brand) : bannerTile(c, pkg);
         if (tile == null) tile = iconTile(c, pkg);
         tile.setHasMipMap(true);
+        tile = Ui.frozen(tile);
         TILES.put(cacheKey, tile);
         return tile;
     }
@@ -792,6 +888,7 @@ final class HomeApps {
         Bitmap b = darkTile();
         Symbols.draw(c, new Canvas(b), symbol, TILE_W / 2f, TILE_H / 2f, TILE_H * 0.36f, 0xF2FFFFFF);
         b.setHasMipMap(true);
+        b = Ui.frozen(b);
         TILES.put(key, b);
         return b;
     }
@@ -826,7 +923,7 @@ final class HomeApps {
         synchronized (LOGOS) {
             if (LOGOS.containsKey("own:" + key)) return LOGOS.get("own:" + key);
         }
-        Bitmap b = ownLogo(c, key);
+        Bitmap b = Ui.frozen(ownLogo(c, key));
         synchronized (LOGOS) {
             LOGOS.put("own:" + key, b);
         }

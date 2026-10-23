@@ -60,7 +60,7 @@ final class Glyphs {
                 Bitmap full = Bitmap.createBitmap(frame, frame, Bitmap.Config.ARGB_8888);
                 d.setBounds(0, 0, frame, frame);
                 d.draw(new Canvas(full));
-                b = trimSides(full);
+                b = Ui.frozen(trimSides(full));
             }
             BITMAPS.put(key, b);
             return b;

@@ -42,7 +42,7 @@ import java.util.Set;
  */
 public class SettingsActivity extends Activity {
     private SettingsView view;
-    private DreamView preview;   // "Screensaver": the screensaver right here, without changing the system setting
+    private WeatherView preview;   // "Screensaver": the screensaver right here, without changing the system setting
 
     @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -96,7 +96,7 @@ public class SettingsActivity extends Activity {
     }
 
     void showPreview() {
-        preview = new DreamView(this);
+        preview = new WeatherView(this);
         setContentView(preview);
         preview.start();
     }
@@ -653,7 +653,8 @@ public class SettingsActivity extends Activity {
 
         private String[] keyLabels() {
             return new String[] {Ui.tr("Botão Netflix", "Netflix button"), Ui.tr("Botão YouTube", "YouTube button"),
-                    Ui.tr("Botão Prime Video", "Prime Video button"), Ui.tr("Botão TCL Channel", "TCL Channel button")};
+                    Ui.tr("Botão Prime Video", "Prime Video button"), Ui.tr("Botão TCL Channel", "TCL Channel button"),
+                    Ui.tr("Botão Sony LIV", "Sony LIV button")};
         }
 
         private String[] keyValues() {
@@ -665,7 +666,7 @@ public class SettingsActivity extends Activity {
             return v;
         }
 
-        /** Installed TV apps, by name, after "Nothing": what a remote button can open. */
+        /** Installed TV apps, by name, after "Nothing" and the CCTV input: what a remote button can open. */
         private void loadApps() {
             PackageManager pm = getContext().getPackageManager();
             List<String[]> found = new ArrayList<>();
@@ -681,6 +682,10 @@ public class SettingsActivity extends Activity {
             appLabels.clear();
             appPkgs.add("");
             appLabels.add(Ui.tr("Nada", "Nothing"));
+            if (HomeApps.cctvIntent(getContext()) != null) {
+                appPkgs.add(Prefs.CCTV);
+                appLabels.add("CCTV");
+            }
             for (String[] f : found) {
                 appPkgs.add(f[0]);
                 appLabels.add(f[1]);

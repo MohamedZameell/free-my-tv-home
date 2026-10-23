@@ -34,8 +34,10 @@ final class HomeData {
     private static final String CURRENCY = Config.CURRENCY.trim().toUpperCase(Locale.ROOT);
     /** Binance quotes dollars as USDT. */
     private static final String QUOTE = CURRENCY.equals("USD") ? "USDT" : CURRENCY;
-    private static final String WEATHER_QUERY = "&current=temperature_2m,weather_code,is_day&daily=temperature_2m_max,temperature_2m_min,sunrise,sunset"
-            + "&hourly=temperature_2m,weather_code,is_day&timezone=auto&forecast_days=2";
+    private static final String WEATHER_QUERY = "&current=temperature_2m,weather_code,is_day,apparent_temperature,relative_humidity_2m,dew_point_2m,"
+            + "cloud_cover,wind_speed_10m,wind_direction_10m,precipitation"
+            + "&daily=temperature_2m_max,temperature_2m_min,sunrise,sunset,uv_index_max"
+            + "&hourly=temperature_2m,weather_code,is_day,cloud_cover,precipitation_probability,visibility&timezone=auto&forecast_days=2";
 
     private static String weatherPlace() {
         return Prefs.latitude() + "," + Prefs.longitude();
@@ -44,7 +46,7 @@ final class HomeData {
     private static String weatherUrl() {
         return "https://api.open-meteo.com/v1/forecast?latitude=" + Prefs.latitude() + "&longitude=" + Prefs.longitude() + WEATHER_QUERY;
     }
-    private static final long PRICES_EVERY = 5 * 60_000L, WEATHER_EVERY = 30 * 60_000L;
+    private static final long PRICES_EVERY = 5 * 60_000L, WEATHER_EVERY = 15 * 60_000L;
     interface Listener { void onData(); }
 
     /** BTC, ETH and SOL; in Brazilian reais also the dollar (USDT/BRL), which Binance doesn't list for most currencies. */
@@ -90,11 +92,16 @@ final class HomeData {
         int code = -1;
         boolean isDay = true;
         long sunrise, sunset;   // today's, in epoch ms
-        // Next hours (starting at the next full hour): time, temperature, code and day/night.
+        // For the weather screensaver (NaN when the cached forecast predates them).
+        double feels = Double.NaN, humidity = Double.NaN, dew = Double.NaN, cover = Double.NaN, wind = Double.NaN, windDir = Double.NaN;
+        double rain = Double.NaN, uv = Double.NaN, visibility = Double.NaN;   // rain in mm, visibility in km
+        // Next hours (starting at the next full hour): time, temperature, code and day/night, cloud cover and chance of rain (%).
         final List<Long> hours = new ArrayList<>();
         final List<Double> hourTemp = new ArrayList<>();
         final List<Integer> hourCode = new ArrayList<>();
         final List<Boolean> hourDay = new ArrayList<>();
+        final List<Double> hourCover = new ArrayList<>();
+        final List<Double> hourChance = new ArrayList<>();
     }
 
     private static HomeData instance;
@@ -109,6 +116,9 @@ final class HomeData {
     final double[] changes = {Double.NaN, Double.NaN, Double.NaN, Double.NaN};
     volatile long pricesAt, weatherAt;
     volatile Weather weather = new Weather();
+    /** The weather to show now (see {@link #current}): what the screens draw. It changes at most once an hour offline. */
+    volatile Weather shown = new Weather();
+    private int shownHour = -2;   // which forecast hour `shown` came from (-1: the fetched reading itself)
 
     private final SharedPreferences cache;
     private final ExecutorService io = Executors.newSingleThreadExecutor();
@@ -128,9 +138,58 @@ final class HomeData {
             // The cached forecast is for the city it was fetched for; another city means fetch again.
             if (w != null && weatherPlace().equals(cache.getString("weatherPlace", ""))) {
                 weather = parseWeather(w);
-                weatherAt = cache.getLong("weatherAt", 0);
+                // Saved before the screensaver needed the extra readings: fetch again at once.
+                weatherAt = Double.isNaN(weather.feels) ? 0 : cache.getLong("weatherAt", 0);
             }
         } catch (Exception ignored) {}
+        updateShown(System.currentTimeMillis());
+    }
+
+    private static boolean sameDay(long a, long b) {
+        java.util.Calendar x = java.util.Calendar.getInstance(), y = java.util.Calendar.getInstance();
+        x.setTimeInMillis(a);
+        y.setTimeInMillis(b);
+        return x.get(java.util.Calendar.YEAR) == y.get(java.util.Calendar.YEAR) && x.get(java.util.Calendar.DAY_OF_YEAR) == y.get(java.util.Calendar.DAY_OF_YEAR);
+    }
+
+    private static final long FRESH = 90 * 60_000L;   // a reading older than this (no internet) gives way to the forecast
+
+    /**
+     * Without internet the last reading gets old, so the forecast fetched with it stands in: each hour's forecast
+     * becomes "now" when its hour comes, for as long as it lasts (24 h). After that, nothing (shown as "—") rather
+     * than a stale number. Sunrise and sunset don't need this: Prayers works them out on the TV.
+     */
+    private synchronized void updateShown(long now) {
+        Weather w = weather;
+        int hour;
+        if (now >= weatherAt && now - weatherAt < FRESH) hour = -1;
+        else {
+            hour = 0;
+            while (hour < w.hours.size() && w.hours.get(hour) <= now - 30 * 60_000L) hour++;   // the nearest hour
+            if (hour >= w.hours.size() || w.hours.get(hour) - now > 30 * 60_000L) hour = w.hours.size();   // ran out
+        }
+        if (hour == shownHour && (hour != -1 || shown == w)) return;
+        shownHour = hour;
+        if (hour == -1) { shown = w; return; }
+        Weather f = new Weather();
+        f.sunrise = w.sunrise;
+        f.sunset = w.sunset;
+        if (sameDay(now, weatherAt)) { f.max = w.max; f.min = w.min; f.uv = w.uv; }   // the day's high, low and UV still hold
+        if (hour < w.hours.size()) {
+            f.temp = w.hourTemp.get(hour);
+            f.code = w.hourCode.get(hour);
+            f.isDay = w.hourDay.get(hour);
+            f.cover = w.hourCover.get(hour);
+            for (int i = hour + 1; i < w.hours.size(); i++) {
+                f.hours.add(w.hours.get(i));
+                f.hourTemp.add(w.hourTemp.get(i));
+                f.hourCode.add(w.hourCode.get(i));
+                f.hourDay.add(w.hourDay.get(i));
+                f.hourCover.add(w.hourCover.get(i));
+                f.hourChance.add(w.hourChance.get(i));
+            }
+        }
+        shown = f;
     }
 
     void addListener(Listener l) { if (!listeners.contains(l)) listeners.add(l); }
@@ -139,6 +198,9 @@ final class HomeData {
     /** Fetches whatever is stale. The screen calls this when it appears and every minute while it's visible. */
     void refreshIfStale() {
         long now = System.currentTimeMillis();
+        Weather before = shown;
+        updateShown(now);
+        if (shown != before) notifyListeners();
         // A negative age (the TV's clock went back) counts as stale: otherwise the data would freeze.
         if (!fetchingPrices && coinCount() > 0 && (now - pricesAt > PRICES_EVERY || now < pricesAt)) {
             fetchingPrices = true;
@@ -164,6 +226,7 @@ final class HomeData {
                     weather = parseWeather(body);
                     weatherAt = System.currentTimeMillis();
                     cache.edit().putString("weather", body).putLong("weatherAt", weatherAt).putString("weatherPlace", weatherPlace()).apply();
+                    updateShown(weatherAt);
                     notifyListeners();
                 } catch (Exception e) {
                     AppLog.w("weather: " + e.getMessage());
@@ -205,7 +268,16 @@ final class HomeData {
         w.temp = current.getDouble("temperature_2m");
         w.code = current.getInt("weather_code");
         w.isDay = current.optInt("is_day", 1) == 1;
+        w.feels = current.optDouble("apparent_temperature");
+        w.humidity = current.optDouble("relative_humidity_2m");
+        w.dew = current.optDouble("dew_point_2m");
+        w.cover = current.optDouble("cloud_cover");
+        w.wind = current.optDouble("wind_speed_10m");
+        w.windDir = current.optDouble("wind_direction_10m");
+        w.rain = current.optDouble("precipitation");
         JSONObject daily = o.getJSONObject("daily");
+        JSONArray uv = daily.optJSONArray("uv_index_max");
+        if (uv != null) w.uv = uv.optDouble(0);
         w.max = daily.getJSONArray("temperature_2m_max").getDouble(0);
         w.min = daily.getJSONArray("temperature_2m_min").getDouble(0);
         w.sunrise = localTime(daily.getJSONArray("sunrise").getString(0), zone);
@@ -216,14 +288,22 @@ final class HomeData {
             JSONArray temps = hourly.getJSONArray("temperature_2m");
             JSONArray codes = hourly.getJSONArray("weather_code");
             JSONArray days = hourly.optJSONArray("is_day");
+            JSONArray covers = hourly.optJSONArray("cloud_cover");
+            JSONArray chances = hourly.optJSONArray("precipitation_probability");
+            JSONArray sight = hourly.optJSONArray("visibility");
             long now = System.currentTimeMillis();
-            for (int i = 0; i < times.length() && w.hours.size() < 6; i++) {
+            for (int i = 0; i < times.length() && w.hours.size() < 24; i++) {
                 long at = localTime(times.getString(i), zone);
-                if (at <= now) continue;
+                if (at <= now) {
+                    if (at > now - 3_600_000L && sight != null) w.visibility = sight.optDouble(i) / 1000;   // this hour's, in km
+                    continue;
+                }
                 w.hours.add(at);
                 w.hourTemp.add(temps.getDouble(i));
                 w.hourCode.add(codes.getInt(i));
                 w.hourDay.add(days == null || days.optInt(i, 1) == 1);
+                w.hourCover.add(covers == null ? Double.NaN : covers.optDouble(i));
+                w.hourChance.add(chances == null ? 0 : chances.optDouble(i, 0));
             }
         }
         return w;
@@ -272,14 +352,6 @@ final class HomeData {
 
     private static Locale locale() {
         return Ui.locale();
-    }
-
-    /** 580.4k · 21.0k · 1.04k · 5.61 (as short as possible; the dollar always with cents). */
-    static String price(double v) {
-        if (Double.isNaN(v)) return "—";
-        if (v >= 10_000) return String.format(locale(), "%.1fk", v / 1000);
-        if (v >= 1000) return String.format(locale(), "%.2fk", v / 1000);
-        return String.format(locale(), "%.2f", v);
     }
 
     /** 416.3k · 12.2k · 1.04k · 531 · 5.05: abbreviated, for the price row on the home screen. */
@@ -355,7 +427,7 @@ final class HomeData {
         return Math.round(fahrenheit() ? v * 9 / 5 + 32 : v) + "°";
     }
 
-    private static boolean fahrenheit() {
+    static boolean fahrenheit() {
         String unit = Prefs.temperature();
         if (unit.equals("F")) return true;
         if (unit.equals("C")) return false;
