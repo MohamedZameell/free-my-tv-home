@@ -19,8 +19,7 @@ No root. Nothing uninstalled. One button to undo.
 </div>
 
 > A fork of [**Free My TV**](https://github.com/simbasjungles/free-my-tv) by Simba and its contributors, rebuilt around
-> a tvOS-inspired home screen and a new screensaver. It's an independent re-creation of a look: no Apple code, fonts,
-> images or videos are included.
+> a tvOS-inspired home screen and a new screensaver.
 
 ## What you get
 
@@ -188,15 +187,12 @@ only when `show_crypto=true`. Your settings stay on your computer and your TV.
   ([@simbasjungles](https://github.com/simbasjungles)), with Enner Pérez, Gabriel Vaz, Breno Nesto, Lucas Aureliano and Ismael Melgar. The home
   switch, ADB-on-the-TV, safety net and much more are theirs.
 - **Quran translation:** Saheeh International, via [Tanzil](https://tanzil.net). **Hadith translations:** as published
-  on [sunnah.com](https://sunnah.com) (Sahih al-Bukhari, Sahih Muslim). Used non-commercially, with thanks; the text
-  is unchanged.
+  on [sunnah.com](https://sunnah.com) (Sahih al-Bukhari, Sahih Muslim). With thanks.
 - This product uses the TMDB API but is not endorsed or certified by [TMDB](https://www.themoviedb.org/).
 - Weather data by [Open-Meteo.com](https://open-meteo.com/) (CC BY 4.0). Prices from the [Binance](https://www.binance.com/) public API.
 - Fonts: [Antonio](https://fonts.google.com/specimen/Antonio), [JetBrains Mono](https://www.jetbrains.com/lp/mono/)
   and [Inter](https://rsms.me/inter/) (SIL OFL 1.1). Icons: [Material Symbols](https://fonts.google.com/icons)
   (Apache 2.0). Coin logos: [cryptocurrency-icons](https://github.com/spothq/cryptocurrency-icons) (CC0).
-- Not affiliated with Apple, Google, TCL or any streaming service. tvOS and Apple TV are trademarks of Apple Inc.;
-  app names and logos belong to their owners.
 
 ## License
 

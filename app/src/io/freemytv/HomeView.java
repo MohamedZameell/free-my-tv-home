@@ -43,7 +43,7 @@ import java.util.concurrent.Executors;
 import java.util.function.Consumer;
 
 /**
- * The home screen, modelled on the look of the tvOS home screen (an independent re-creation, no Apple assets):
+ * The home screen, modelled on the tvOS home screen:
  *  - Top Shelf: the featured title's photo fills the screen with its logo (TMDB) at the top left; the picks rotate by
  *    themselves (a sliding carousel) until one is focused; a menu-bar glass pill at the top right holds the weather,
  *    the time and the Live TV, HDMI Inputs and Settings buttons;
