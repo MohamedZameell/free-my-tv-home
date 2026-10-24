@@ -9,7 +9,7 @@
 A Dock of your own apps, a Top Shelf of what's worth watching, and a screensaver that shows the sky outside.<br>
 No root. Nothing uninstalled. One button to undo.
 
-[Install with Claude Code](#install-with-claude-code) · [Install by hand](#install-by-hand) · [Settings](#settings) · [Going back](#going-back) · [Credits](#credits)
+[Install with Claude Code](#install-with-claude-code) · [Install by hand](#install-by-hand) · [Settings](#settings) · [Going back](#going-back) · [Troubleshooting](#troubleshooting) · [Credits](#credits)
 
 ![License: MIT](https://img.shields.io/badge/license-MIT-blue)
 ![Android 9+](https://img.shields.io/badge/Android%20TV-9%2B-3ddc84)
@@ -96,7 +96,12 @@ You need a Google TV or Android TV (Android 9 or newer) and a computer on the sa
    ```bash
    adb shell "appops set io.freemytv AUTO_START allow || appops set io.freemytv APP_AUTO_START allow"
    ```
-5. **On the TV**, open *Free My TV* → *Home Screen* → *Free My TV*.
+   Then compile it ahead of time, so it's smooth from the first minute instead of after a few nights:
+   ```bash
+   adb shell cmd package compile -m speed -f io.freemytv
+   adb disconnect
+   ```
+5. **On the TV**, open *Free My TV* → *Home Screen* → *Free My TV*, and tick *Always allow* on the debugging prompt.
 
 ## Settings
 
@@ -136,6 +141,30 @@ exactly as they were. If the new home screen ever crashes three times in five mi
 
 To remove it for good, switch to *Original* first, then uninstall *Free My TV* (Settings → Apps).
 
+## Troubleshooting
+
+**The switch keeps loading.** The TV's *Allow USB debugging?* prompt was missed or answered *Don't allow*. Stop
+the app (`adb shell am force-stop io.freemytv`, or Settings → Apps), run `adb disconnect` on your computer, and switch
+again; this time tick *Always allow*.
+
+**Everything feels slow after installing or a factory reset.** Android compiles apps slowly, over a few nights while
+the TV sleeps; until then they run slower. Do it now for the apps you use:
+```bash
+adb shell cmd package compile -m speed -f io.freemytv
+adb shell cmd package bg-dexopt-job
+```
+
+**Apps stutter on a TV with little memory (2–3 GB).** Apps you leave with Home or Back stay open in the background.
+Check with `adb shell dumpsys meminfo` (the *Cached* list); force-stop the big ones you're not using.
+
+**TCL: the standby light stays off when the TV is off.** That's not this app. With Google TV's hands-free
+*"Hey Google"*, the built-in mic keeps listening, so the TV never goes into standby and the light never comes on
+(TCL's manual: *"the built-in MIC is always listening"*). Turn off the mic switch on the TV, or set the TV up as
+*Basic TV*: on the first setup screen, press ▼ to find *Set up basic TV*.
+
+**Updating.** Build again and `adb install -r FreeMyTV.apk` while the TV shows another app: installing while Free My
+TV is on screen sends a TCL TV to its live-TV player. Press Home to come back.
+
 ## What it changes
 
 - It becomes the home screen and the screensaver.
@@ -159,7 +188,7 @@ home screen and promo apps, and walks you through a test. [CLAUDE.md](CLAUDE.md)
 ## How it works
 
 - **A plain Android app, no Gradle, no libraries.** [`build.sh`](build.sh) runs aapt2 → javac → d8 → zipalign →
-  apksigner and makes a ~3 MB APK.
+  apksigner and makes a ~1.5 MB APK.
 - **It uses the TV's own ADB, from inside the TV** (`127.0.0.1:5555`, its own key): the same commands you would run.
   Nothing listens to the network.
 - **Drawn by hand on one Canvas** at 60 fps, with Android 13 shaders for the glass.

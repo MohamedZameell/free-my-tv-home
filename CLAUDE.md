@@ -34,6 +34,10 @@ before you do it, and let them do the taps on the TV.
    (some firmware calls the operation `APP_AUTO_START`; this tries both):
    TCL's `TclAppBoot` blocks background jobs by default, so the switch (and the watchdog) never run. The log shows
    `forbid bind service ... ModeJob`.
+   Then `adb shell cmd package compile -m speed -f io.freemytv`: a fresh install runs uncompiled (dexopt `verify`)
+   and the home screen stutters until Android compiles it overnight. After a factory reset, also
+   `adb shell cmd package bg-dexopt-job`. Run `adb disconnect` before they switch, so the computer's connection
+   doesn't hold the TV's debugging prompt.
 7. **Tell them what the switch does** before they make it: the home screen and screensaver change, a short list of
    promo apps is turned off (never uninstalled), and *Original* brings it all back.
 8. **They switch on the TV:** *Free My TV* → *Home Screen* → *Free My TV*. The app uses the TV's own ADB on
@@ -44,6 +48,15 @@ before you do it, and let them do the taps on the TV.
    in `adb shell dumpsys wifi` (each block starts with its `ID:`), and with their OK remove them with
    `adb shell cmd wifi forget-network <id>`.
 9. **Check:** `adb logcat -s FreeMyTV` shows what the switch did.
+   Stuck loading? They missed or refused the debugging prompt: `adb shell am force-stop io.freemytv`, `adb disconnect`,
+   and they switch again with *Always allow* ticked.
+
+**Someone watching?** Check first (`adb shell dumpsys window | grep mCurrentFocus`). Read-only commands and
+`adb install` with another app in front are fine; never send keys or change settings while someone is watching.
+
+**A TCL standby light that stays off** on Google TV is hands-free "Hey Google" keeping the mic listening, so the TV
+never reaches standby. Not this app: don't write TCL's `tcl_sys_lights_*` settings. The fix is the TV's mic switch
+or Basic TV.
 
 ## Adapting it to another TV
 
