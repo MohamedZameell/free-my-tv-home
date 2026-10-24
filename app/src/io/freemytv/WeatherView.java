@@ -937,7 +937,7 @@ final class WeatherView extends View implements Choreographer.FrameCallback, Hom
         // The date line (only the city while the TV's clock isn't set: a wrong date and wrong prayers would mislead).
         boolean clock = clockSet(now);
         String line = Prefs.city().toUpperCase(loc) + (clock ? "  ·  " + new SimpleDateFormat("EEEE, MMM d", loc).format(new Date(now)).toUpperCase(loc)
-                + "  ·  " + new SimpleDateFormat("HH:mm", loc).format(new Date(now)) : "");
+                + "  ·  " + new SimpleDateFormat(Ui.en ? "h:mm a" : "HH:mm", loc).format(new Date(now)) : "");
         top.setAlpha(191);
         float tw = top.measureText(line);
         bake(out.above, CX - tw / 2 - 12, 62, (int) tw + 24, 40, c -> c.drawText(line, CX, 92, top));

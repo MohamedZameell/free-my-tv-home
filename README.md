@@ -21,6 +21,13 @@ No root. Nothing uninstalled. One button to undo.
 > A fork of [**Free My TV**](https://github.com/simbasjungles/free-my-tv) by Simba and its contributors, rebuilt around
 > a tvOS-inspired home screen and a new screensaver.
 
+<p align="center">
+  <img src="docs/screenshots/home.jpg" width="49%" alt="Home screen: the Dock under a trending title">
+  <img src="docs/screenshots/top-shelf.jpg" width="49%" alt="Top Shelf: the title full screen">
+  <img src="docs/screenshots/all-apps.jpg" width="49%" alt="All apps and inputs">
+  <img src="docs/screenshots/screensaver.jpg" width="49%" alt="Weather screensaver">
+</p>
+
 ## What you get
 
 **Home screen**
