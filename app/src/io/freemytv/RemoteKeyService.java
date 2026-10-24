@@ -12,14 +12,6 @@ public class RemoteKeyService extends AccessibilityService {
     /** The window on screen (package/class), from window changes only: no window content is read. */
     private String foreground = "";
     private boolean backHome;
-    private StandbyLight light;
-
-    @Override protected void onServiceConnected() { light = StandbyLight.start(this); }
-
-    @Override public void onDestroy() {
-        if (light != null) light.stop(this);
-        super.onDestroy();
-    }
 
     @Override protected boolean onKeyEvent(KeyEvent event) {
         if (event.getKeyCode() == KeyEvent.KEYCODE_BACK) return backToHome(event);
